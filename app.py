@@ -8,9 +8,11 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
-IMAGE_FOLDER = "image"
+# Menggunakan Absolute Path agar aman di server cloud seperti Render
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
+IMAGE_FOLDER = os.path.join(BASE_DIR, "image")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -22,7 +24,7 @@ COOLDOWN_TIME = 7200  # 2 jam dalam detik
 
 @app.route("/")
 def home():
-    return send_from_directory(".", "index.html")
+    return send_from_directory(BASE_DIR, "index.html")
 
 @app.route("/generate", methods=["POST"])
 def generate_doodle():
@@ -65,16 +67,24 @@ def generate_doodle():
 
         fps = 30
 
-        # Load gambar tangan
+        # --- LOAD GAMBAR TANGAN DENGAN ABSOLUTE PATH ---
         hand_path = os.path.join(IMAGE_FOLDER, "tangan.png")
         hand_img = None
+        
         if os.path.exists(hand_path):
+            # Gunakan IMREAD_UNCHANGED agar channel transparansi (PNG alpha) ikut terbaca
             hand_img = cv2.imread(hand_path, cv2.IMREAD_UNCHANGED)
             if hand_img is not None:
+                # Jika gambar tidak memiliki alpha channel (misal JPG/PNG biasa tanpa transparan), tambahkan alpha channel buatan
+                if hand_img.shape[2] == 3:
+                    hand_img = cv2.cvtColor(hand_img, cv2.COLOR_BGR2BGRA)
+                
                 h_h, h_w = hand_img.shape[:2]
                 new_w = 450
                 new_h = int(h_h * (new_w / h_w))
                 hand_img = cv2.resize(hand_img, (new_w, new_h))
+        else:
+            print(f"Peringatan: File tangan.png tidak ditemukan di path: {hand_path}")
 
         img_raw = cv2.imread(input_path)
         if img_raw is None:
@@ -246,7 +256,7 @@ def generate_doodle():
                             partial_path = path[:take_n]
                             if len(partial_path) > 1:
                                 pts_arr = np.array(partial_path, np.int32)
-                                cv2.polylines(canvas, [pts_arr], isClosed=False, color=(0, 0, 1), thickness=2)
+                                cv2.polylines(canvas, [pts_arr], isClosed=False, color=(0, 0, 0), thickness=2)
                             if len(partial_path) > 0:
                                 current_hand_pos = partial_path[-1]
                             break
