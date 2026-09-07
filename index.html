@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Doodle Notes Video Generator</title>
+    <title>KepoDoodle Video Generator</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -24,9 +24,15 @@
             max-width: 500px;
             text-align: center;
         }
+        /* STYLE LOGO */
+        .logo-img {
+            max-width: 150px; /* Sesuaikan ukuran logo */
+            margin-bottom: 15px;
+        }
         h2 {
             color: #333;
             margin-bottom: 10px;
+            margin-top: 0;
         }
         p {
             color: #666;
@@ -89,6 +95,7 @@
             width: 100%;
             font-weight: bold;
             transition: background 0.3s;
+            box-sizing: border-box; /* Penting agar padding tidak merusak lebar */
         }
         .btn:hover {
             background-color: #0056b3;
@@ -145,23 +152,26 @@
 <body>
 
     <div class="container">
-        <h2>Doodle Notes Video Generator</h2>
-        <p>Unggah gambar Anda (PNG/JPG) untuk diubah menjadi animasi sketsa tangan.</p>
+        <!-- LOGO DITAMBAHKAN DI SINI -->
+        <img src="https://i.ibb.co/gP2yB6v/kepodoodle-logo.png" alt="Logo KepoDoodle" class="logo-img" border="0">
+        
+        <h2>KepoDoodle Generator</h2>
+        <p>Unggah foto Anda untuk diubah menjadi video animasi bergambar tangan.</p>
 
         <div class="upload-box" onclick="document.getElementById('imageFile').click()">
-            <p id="fileNameDisplay" style="margin: 0; color: #007bff; font-weight: bold;">📁 Klik di sini untuk memilih gambar</p>
-            <input type="file" id="imageFile" accept="image/*" onchange="previewFile()">
+            <p id="fileNameDisplay" style="margin: 0; color: #007bff; font-weight: bold;">📁 Klik di sini untuk memilih foto</p>
+            <input type="file" id="imageFile" accept="image/png, image/jpeg, image/jpg" onchange="previewFile()">
         </div>
 
         <!-- PILIHAN ORIENTASI VIDEO -->
         <div class="orientation-group">
-            <label>Pilih Orientasi Hasil Video:</label>
+            <label>Pilih Orientasi Video Hasil:</label>
             <div class="radio-options">
                 <label>
-                    <input type="radio" name="orientation" value="horizontal" checked> 🖥️ Horizontal (16:9)
+                    <input type="radio" name="orientation" value="horizontal" checked> 🖥️ Horizontal (16:9) - YouTube
                 </label>
                 <label>
-                    <input type="radio" name="orientation" value="potret"> 📱 Potret (9:16)
+                    <input type="radio" name="orientation" value="potret"> 📱 Potret (9:16) - TikTok/Reels
                 </label>
             </div>
         </div>
@@ -171,7 +181,7 @@
         <!-- PROGRESS BAR -->
         <div id="progressContainer">
             <div class="progress-info">
-                <span id="progressStatusText">Merender video...</span>
+                <span id="progressStatusText">Memproses...</span>
                 <span id="progressPercent">0%</span>
             </div>
             <div class="progress-bar-bg">
@@ -182,7 +192,7 @@
         <p id="statusMsg"></p>
 
         <div id="downloadArea">
-            <a id="downloadLink" class="btn" style="background-color: #28a745; text-decoration: none; display: inline-block; box-sizing: border-box;" href="#" download>⬇️ Unduh Video Doodle (.mp4)</a>
+            <a id="downloadLink" class="btn" style="background-color: #28a745; text-decoration: none; display: inline-block;" href="#" download>⬇️ Unduh Video Hasil (.mp4)</a>
         </div>
     </div>
 
@@ -193,6 +203,17 @@
             const submitBtn = document.getElementById('submitBtn');
 
             if (fileInput.files.length > 0) {
+                const validExtensions = ['image/png', 'image/jpeg', 'image/jpg'];
+                const fileType = fileInput.files[0].type;
+
+                if(!validExtensions.includes(fileType)) {
+                    alert("Hanya file PNG dan JPG yang diperbolehkan.");
+                    fileInput.value = ''; // Reset input
+                    fileNameDisplay.innerText = '📁 Klik di sini untuk memilih foto';
+                    submitBtn.disabled = true;
+                    return;
+                }
+
                 fileNameDisplay.innerText = "Terpilih: " + fileInput.files[0].name;
                 submitBtn.disabled = false;
             }
@@ -214,7 +235,7 @@
                 return;
             }
 
-            // Mengambil nilai orientasi yang dipilih pengguna (horizontal / potret)
+            // Mengambil nilai orientasi yang dipilih pengguna
             const selectedOrientation = document.querySelector('input[name="orientation"]:checked').value;
 
             const formData = new FormData();
@@ -231,30 +252,30 @@
             progressPercent.innerText = '0%';
             progressStatusText.innerText = 'Mengunggah & menyesuaikan orientasi...';
 
-            // Simulasi pergerakan progress bar agar interaktif saat server merender video
+            // Simulasi pergerakan progress bar (Render di cloud butuh waktu)
             let simulatedProgress = 0;
             const progressInterval = setInterval(() => {
-                if (simulatedProgress < 90) {
-                    simulatedProgress += Math.floor(Math.random() * 4) + 2;
-                    if (simulatedProgress > 90) simulatedProgress = 90;
+                if (simulatedProgress < 95) { // Tahan di 90% sampai dapat respon
+                    simulatedProgress += Math.floor(Math.random() * 3) + 1; 
+                    if (simulatedProgress > 95) simulatedProgress = 95;
                     progressBarFill.style.width = simulatedProgress + '%';
                     progressPercent.innerText = simulatedProgress + '%';
                     
-                    if (simulatedProgress > 45) {
+                    if (simulatedProgress > 50) {
                         progressStatusText.innerText = 'Sedang merender animasi sketsa & warna...';
                     }
                 }
-            }, 350);
+            }, 800); // Interval lebih lambat karena Render butuh waktu
 
             try {
-                // Mengirim file dan orientasi ke backend Python Flask (localhost:5000)
-                const response = await fetch('http://127.0.0.1:5000/generate', {
+                // --- ALAMAT FETCH TELAH DIUBAH KE LINK RENDER ANDA ---
+                const response = await fetch('https://kepodoodle.onrender.com/generate', {
                     method: 'POST',
                     body: formData
                 });
 
                 const result = await response.json();
-                clearInterval(progressInterval);
+                clearInterval(progressInterval); // Hentikan simulasi
 
                 if (response.ok) {
                     progressBarFill.style.width = '100%';
@@ -268,21 +289,28 @@
                         
                         // Siapkan tombol unduh file hasil render
                         const downloadLink = document.getElementById('downloadLink');
-                        downloadLink.href = 'http://127.0.0.1:5000' + result.download_url;
+                        // Pastikan URL download mengarah ke backend Render Anda
+                        downloadLink.href = 'https://kepodoodle.onrender.com' + result.download_url;
                         downloadArea.style.display = 'block';
                         submitBtn.disabled = false;
-                    }, 400);
+                    }, 500);
                 } else {
                     progressContainer.style.display = 'none';
                     statusMsg.className = "error";
-                    statusMsg.innerText = "❌ Gagal: " + (result.error || "Terjadi kesalahan pada server.");
+                    
+                    let errorDetail = result.error || "Terjadi kesalahan pada server.";
+                    if (errorDetail.includes("429")) {
+                         errorDetail = "Batas penggunaan gratis tercapai. Silakan coba lagi nanti.";
+                    }
+
+                    statusMsg.innerText = "❌ Gagal: " + errorDetail;
                     submitBtn.disabled = false;
                 }
             } catch (error) {
                 clearInterval(progressInterval);
                 progressContainer.style.display = 'none';
                 statusMsg.className = "error";
-                statusMsg.innerText = "❌ Gagal terhubung ke backend Python. Pastikan file app.py sudah berjalan!";
+                statusMsg.innerText = "❌ Gagal terhubung ke server. Pastikan layanan online.";
                 submitBtn.disabled = false;
             }
         }
