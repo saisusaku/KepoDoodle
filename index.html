@@ -24,9 +24,8 @@
             max-width: 500px;
             text-align: center;
         }
-        /* STYLE LOGO */
         .logo-img {
-            max-width: 150px; /* Sesuaikan ukuran logo */
+            max-width: 150px;
             margin-bottom: 15px;
         }
         h2 {
@@ -54,8 +53,6 @@
         input[type="file"] {
             display: none;
         }
-        
-        /* STYLE PILIHAN ORIENTASI */
         .orientation-group {
             text-align: left;
             background: #f8fafc;
@@ -83,7 +80,6 @@
             gap: 6px;
             color: #4b5563;
         }
-
         .btn {
             background-color: #007bff;
             color: white;
@@ -95,7 +91,7 @@
             width: 100%;
             font-weight: bold;
             transition: background 0.3s;
-            box-sizing: border-box; /* Penting agar padding tidak merusak lebar */
+            box-sizing: border-box;
         }
         .btn:hover {
             background-color: #0056b3;
@@ -119,8 +115,6 @@
             margin-top: 20px;
             display: none;
         }
-        
-        /* PROGRESS BAR */
         #progressContainer {
             margin-top: 20px;
             display: none;
@@ -152,7 +146,6 @@
 <body>
 
     <div class="container">
-        <!-- LOGO DITAMBAHKAN DI SINI -->
         <img src="https://i.ibb.co/gP2yB6v/kepodoodle-logo.png" alt="Logo KepoDoodle" class="logo-img" border="0">
         
         <h2>KepoDoodle Generator</h2>
@@ -163,7 +156,6 @@
             <input type="file" id="imageFile" accept="image/png, image/jpeg, image/jpg" onchange="previewFile()">
         </div>
 
-        <!-- PILIHAN ORIENTASI VIDEO -->
         <div class="orientation-group">
             <label>Pilih Orientasi Video Hasil:</label>
             <div class="radio-options">
@@ -178,7 +170,6 @@
 
         <button id="submitBtn" class="btn" onclick="uploadAndGenerate()" disabled>Mulai Render Video</button>
 
-        <!-- PROGRESS BAR -->
         <div id="progressContainer">
             <div class="progress-info">
                 <span id="progressStatusText">Memproses...</span>
@@ -208,7 +199,7 @@
 
                 if(!validExtensions.includes(fileType)) {
                     alert("Hanya file PNG dan JPG yang diperbolehkan.");
-                    fileInput.value = ''; // Reset input
+                    fileInput.value = '';
                     fileNameDisplay.innerText = '📁 Klik di sini untuk memilih foto';
                     submitBtn.disabled = true;
                     return;
@@ -235,14 +226,12 @@
                 return;
             }
 
-            // Mengambil nilai orientasi yang dipilih pengguna
             const selectedOrientation = document.querySelector('input[name="orientation"]:checked').value;
 
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
             formData.append('orientation', selectedOrientation);
 
-            // Reset UI & Tampilkan Progress Bar
             submitBtn.disabled = true;
             downloadArea.style.display = 'none';
             statusMsg.innerText = "";
@@ -252,10 +241,9 @@
             progressPercent.innerText = '0%';
             progressStatusText.innerText = 'Mengunggah & menyesuaikan orientasi...';
 
-            // Simulasi pergerakan progress bar (Render di cloud butuh waktu)
             let simulatedProgress = 0;
             const progressInterval = setInterval(() => {
-                if (simulatedProgress < 95) { // Tahan di 90% sampai dapat respon
+                if (simulatedProgress < 95) {
                     simulatedProgress += Math.floor(Math.random() * 3) + 1; 
                     if (simulatedProgress > 95) simulatedProgress = 95;
                     progressBarFill.style.width = simulatedProgress + '%';
@@ -265,17 +253,24 @@
                         progressStatusText.innerText = 'Sedang merender animasi sketsa & warna...';
                     }
                 }
-            }, 800); // Interval lebih lambat karena Render butuh waktu
+            }, 800);
 
             try {
-                // --- ALAMAT FETCH TELAH DIUBAH KE LINK RENDER ANDA ---
                 const response = await fetch('https://kepodoodle.onrender.com/generate', {
                     method: 'POST',
                     body: formData
                 });
 
                 const result = await response.json();
-                clearInterval(progressInterval); // Hentikan simulasi
+                clearInterval(progressInterval);
+
+                if (response.status === 429) {
+                    progressContainer.style.display = 'none';
+                    statusMsg.className = "error";
+                    statusMsg.innerText = "❌ " + result.error;
+                    submitBtn.disabled = false;
+                    return;
+                }
 
                 if (response.ok) {
                     progressBarFill.style.width = '100%';
@@ -287,9 +282,7 @@
                         statusMsg.className = "success";
                         statusMsg.innerText = "✅ " + result.message;
                         
-                        // Siapkan tombol unduh file hasil render
                         const downloadLink = document.getElementById('downloadLink');
-                        // Pastikan URL download mengarah ke backend Render Anda
                         downloadLink.href = 'https://kepodoodle.onrender.com' + result.download_url;
                         downloadArea.style.display = 'block';
                         submitBtn.disabled = false;
@@ -297,13 +290,7 @@
                 } else {
                     progressContainer.style.display = 'none';
                     statusMsg.className = "error";
-                    
-                    let errorDetail = result.error || "Terjadi kesalahan pada server.";
-                    if (errorDetail.includes("429")) {
-                         errorDetail = "Batas penggunaan gratis tercapai. Silakan coba lagi nanti.";
-                    }
-
-                    statusMsg.innerText = "❌ Gagal: " + errorDetail;
+                    statusMsg.innerText = "❌ Gagal: " + (result.error || "Terjadi kesalahan pada server.");
                     submitBtn.disabled = false;
                 }
             } catch (error) {
