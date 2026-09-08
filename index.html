@@ -141,6 +141,13 @@
             width: 0%;
             transition: width 0.3s ease;
         }
+        #quotaInfo {
+            font-size: 12px;
+            color: #555;
+            margin-top: -15px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -150,6 +157,9 @@
         
         <h2>KepoDoodle Generator</h2>
         <p>Unggah foto Anda untuk diubah menjadi video animasi bergambar tangan.</p>
+
+        <!-- Informasi Kuota -->
+        <div id="quotaInfo">Sisa kuota render jam ini: Memuat...</div>
 
         <div class="upload-box" onclick="document.getElementById('imageFile').click()">
             <p id="fileNameDisplay" style="margin: 0; color: #007bff; font-weight: bold;">📁 Klik di sini untuk memilih foto</p>
@@ -188,6 +198,37 @@
     </div>
 
     <script>
+        const MAX_VIDEOS_PER_HOUR = 5;
+        const STORAGE_KEY = 'kepodoodle_render_history';
+
+        // Cek dan update informasi kuota saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', updateQuotaDisplay);
+
+        function getValidHistory() {
+            const now = new Date().getTime();
+            const oneHour = 60 * 60 * 1000;
+            let history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            
+            // Filter hanya timestamp yang masih dalam rentang 1 jam terakhir
+            history = history.filter(timestamp => (now - timestamp) < oneHour);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            return history;
+        }
+
+        function updateQuotaDisplay() {
+            const history = getValidHistory();
+            const remaining = MAX_VIDEOS_PER_HOUR - history.length;
+            const quotaInfo = document.getElementById('quotaInfo');
+            
+            if (remaining > 0) {
+                quotaInfo.innerText = `⏳ Sisa kuota render jam ini: ${remaining} dari ${MAX_VIDEOS_PER_HOUR} video`;
+                quotaInfo.style.color = '#16a34a';
+            } else {
+                quotaInfo.innerText = `⚠️ Kuota habis (${MAX_VIDEOS_PER_HOUR}/5 video). Coba lagi beberapa saat lagi.`;
+                quotaInfo.style.color = '#dc2626';
+            }
+        }
+
         function previewFile() {
             const fileInput = document.getElementById('imageFile');
             const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -205,12 +246,30 @@
                     return;
                 }
 
+                // Cek kuota sebelum tombol aktif
+                const history = getValidHistory();
+                if (history.length >= MAX_VIDEOS_PER_HOUR) {
+                    alert("Anda telah mencapai batas maksimal 5 video per jam. Silakan tunggu hingga 1 jam ke depan.");
+                    fileInput.value = '';
+                    fileNameDisplay.innerText = '📁 Klik di sini untuk memilih foto';
+                    submitBtn.disabled = true;
+                    return;
+                }
+
                 fileNameDisplay.innerText = "Terpilih: " + fileInput.files[0].name;
                 submitBtn.disabled = false;
             }
         }
 
         async function uploadAndGenerate() {
+            // Validasi ulang kuota sebelum proses dimulai
+            const history = getValidHistory();
+            if (history.length >= MAX_VIDEOS_PER_HOUR) {
+                alert("Batas kuota terlampaui (5 video per jam).");
+                updateQuotaDisplay();
+                return;
+            }
+
             const fileInput = document.getElementById('imageFile');
             const statusMsg = document.getElementById('statusMsg');
             const submitBtn = document.getElementById('submitBtn');
@@ -273,6 +332,12 @@
                 }
 
                 if (response.ok) {
+                    // Catat sukses render ke localStorage
+                    const currentHistory = getValidHistory();
+                    currentHistory.push(new Date().getTime());
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentHistory));
+                    updateQuotaDisplay();
+
                     progressBarFill.style.width = '100%';
                     progressPercent.innerText = '100%';
                     progressStatusText.innerText = 'Render selesai!';
